@@ -7,16 +7,35 @@ import { cors, httpErrorHandler } from 'middy/middlewares'
 import { updateTodo } from '../../businessLogic/todos'
 import { UpdateTodoRequest } from '../../requests/UpdateTodoRequest'
 import { getUserId } from '../utils'
+const AWS = require('aws-sdk')
+const uuid = require('uuid')
+const docClient = new AWS.DynamoDB.DocumentClient()
+const todosTable = process.env.TODOS_TABLE
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     const todoId = event.pathParameters.todoId
     const updatedTodo: UpdateTodoRequest = JSON.parse(event.body)
     // TODO: Update a TODO item with the provided id using values in the "updatedTodo" object
+    
+    await docClient.Update({
+      TableName: todosTable,
+      Key: { "todoId" : todoId,
+             "userId" : getUserId},
+      UpdateExpression: "set updatedTodo.name = :name, updatedTodo.dueDate = :dueDate, updatedTodo.done =:done"
+      
+          })
 
 
-    return undefined
-)
+     return {
+       statusCode: 200,
+      headers:{'Access-Control-Allow-Origin': '*'},
+      body: JSON.stringify({
+        
+      })} 
+
+    
+    })
 
 handler
   .use(httpErrorHandler())
