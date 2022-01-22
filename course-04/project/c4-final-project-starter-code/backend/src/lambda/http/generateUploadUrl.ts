@@ -1,54 +1,35 @@
 import 'source-map-support/register'
 
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
-import * as middy from 'middy'
-import { cors, httpErrorHandler } from 'middy/middlewares'
-import * as AWS from 'aws-sdk'
+import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
 
+import * as uuid from 'uuid'
 
-import { createAttachmentPresignedUrl } from '../../businessLogic/todos'
+import { generateUploadUrl, updateAttachmentUrl } from '../../helpers/todos'
+
+import { createLogger } from '../../utils/logger'
+
 import { getUserId } from '../utils'
 
-const bucketName = process.env.ATTACHMENT_S3_BUCKET
+const logger = createLogger('generateUploadUrl')
 
-const urlExpiration = process.env.SIGNED_URL_EXPIRATION
+export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  logger.info('Processing generateUploadUrl event', { event })
 
-const s3 = new AWS.S3({
-  signatureVersion: 'v4'
-})
+  const userId = getUserId(event)
+  const todoId = event.pathParameters.todoId
+  const attachmentId = uuid.v4()
 
-export const handler = middy(
-  async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    const todoId = event.pathParameters.todoId
-    // TODO: Return a presigned URL to upload a file for a TODO item with the provided id
-       
-    const url = getUploadUrl(todoId)
-    
-    return {
-      statusCode: 201,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify({
-      uploadUrl: url
-      })
-    }
-    
-  }
-)
+  const uploadUrl = await generateUploadUrl(attachmentId)
 
-function getUploadUrl (todoId: String)
-    {
-      return s3.getSignedUrl('putObject',
-                     {Bucket: bucketName,
-                      Key: todoId,
-                      Expires: urlExpiration})
-    }
+  await updateAttachmentUrl(userId, todoId, attachmentId)
 
-handler
-  .use(httpErrorHandler())
-  .use(
-    cors({
-      credentials: true
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify({
+      uploadUrl
     })
-  )
+  }
+}

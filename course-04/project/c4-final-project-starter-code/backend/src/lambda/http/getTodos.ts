@@ -1,46 +1,30 @@
 import 'source-map-support/register'
 
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
-import * as middy from 'middy'
-import { cors } from 'middy/middlewares'
+import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
 
-import { getTodosForUser as getTodosForUser } from '../../businessLogic/todos'
+import { getTodos } from '../../helpers/todos'
+
+import { createLogger } from '../../utils/logger'
+
+
 import { getUserId } from '../utils';
-import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 
-// TODO: Get all TODO items for a current user
-export const handler = middy(
-  async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    // Write your code here
-    
-    const userId = getUserId
-    const docClient = new DocumentClient()
+const logger = createLogger('getTodos')
 
-    const todos = getTodosForUser
+export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  logger.info('Processing getTodos event', { event })
 
-   
- if (todos.count !==0)
+  const userId = getUserId(event)
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify(todos.Items[{}])
-      }
-   return {
-        statusCode: 404,
-        headers: {
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: ''
-      }
-    
-  })
+  const items = await getTodos(userId)
 
-
-handler.use(
-  cors({
-    credentials: true
-  })
-)
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify({
+      items
+    })
+  }
+}
