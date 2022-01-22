@@ -1,26 +1,19 @@
-
 import 'source-map-support/register'
 
-//import * as AWS from 'aws-sdk'
+import * as AWS from 'aws-sdk'
 
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 
-//import * as AWSXRay from 'aws-xray-sdk'
+import * as AWSXRay from 'aws-xray-sdk'
 
 
 import { TodoItem } from '../models/TodoItem'
-
 import { TodoUpdate } from '../models/TodoUpdate'
-
 import { createLogger } from '../utils/logger'
-
-
-
-// TODO: Implement the dataLayer logic
 
 const logger = createLogger('todosAccess')
 
-//const XAWS = AWSXRay.captureAWS(AWS)
+const XAWS = AWSXRay.captureAWS(AWS)
 
 export class TodosAccess {
 
@@ -48,15 +41,14 @@ export class TodosAccess {
 
     const items = result.Items
 
-    logger.info(`Found ${items.length} number of todos for user ${userId} in ${this.todosTable}`)
+    logger.info(`Found ${items.length} todos for user ${userId} in ${this.todosTable}`)
 
     return items as TodoItem[]
   }
 
   async getTodoItem(todoId: string, userId: string): Promise<TodoItem> {
-    
-    logger.info(`Getting todo ${todoId} for user ${userId} from ${this.todosTable}`)
-    
+    logger.info(`Getting todo ${todoId} from ${this.todosTable}`)
+
     const result = await this.docClient.get({
       TableName: this.todosTable,
       Key: {
@@ -66,10 +58,7 @@ export class TodosAccess {
     }).promise()
 
     const item = result.Item
-    
-    logger.info(`Found ${item.length} a todo for user ${userId} in ${this.todosTable}`)
 
-    
     return item as TodoItem
   }
 
